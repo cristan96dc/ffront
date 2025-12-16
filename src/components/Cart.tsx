@@ -1,4 +1,5 @@
-import { ShoppingBag, Trash2 } from 'lucide-react';
+import { ShoppingCart, X, Send, Plus, Minus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import type { ItemCarrito } from '../services/api';
 
 interface CartProps {
@@ -6,74 +7,154 @@ interface CartProps {
   total: number;
   onRemoveItem?: (id: number) => void;
   onClearCart?: () => void;
+  onUpdateQuantity?: (id: number, cantidad: number) => void;
 }
 
-export function Cart({ items, total, onRemoveItem, onClearCart }: CartProps) {
-  if (items.length === 0) return null;
+export function Cart({ items, total, onRemoveItem, onClearCart, onUpdateQuantity }: CartProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const generarMensajeWhatsApp = () => {
+    if (items.length === 0) {
+      return encodeURIComponent('¡Hola! Me interesa conocer más sobre sus productos 😊');
+    }
+
+    let mensaje = '🛒 *Pedido desde Mi Tienda* 🛒\n\n';
+
+    items.forEach(item => {
+      mensaje += `• ${item.nombre}\n`;
+      mensaje += `  Cantidad: ${item.cantidad}\n`;
+      mensaje += `  Precio: $${item.valor.toFixed(2)} c/u\n`;
+      mensaje += `  Subtotal: $${(item.valor * item.cantidad).toFixed(2)}\n\n`;
+    });
+
+    mensaje += `━━━━━━━━━━━━━━━━\n`;
+    mensaje += `💰 *TOTAL: $${total.toFixed(2)}*\n\n`;
+    mensaje += `¡Gracias por tu pedido! 😊`;
+
+    return encodeURIComponent(mensaje);
+  };
+
+  const enviarPorWhatsApp = () => {
+    const mensaje = generarMensajeWhatsApp();
+    const numeroWhatsApp = '5491234567890';
+    const url = `https://wa.me/${numeroWhatsApp}?text=${mensaje}`;
+    window.open(url, '_blank');
+  };
+
+  const totalItems = items.reduce((sum, item) => sum + item.cantidad, 0);
 
   return (
-    <div className="fixed bottom-6 right-6 bg-white rounded-xl shadow-2xl p-5 w-80 z-40 border border-gray-200">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <ShoppingBag className="w-5 h-5" />
-          <h3 className="font-bold text-lg">Carrito</h3>
-          <span className="bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-1 rounded-full">
-            {items.length}
-          </span>
-        </div>
-        
-        {onClearCart && items.length > 0 && (
-          <button
-            onClick={onClearCart}
-            className="text-sm text-red-500 hover:text-red-700"
-          >
-            Vaciar
-          </button>
+    <>
+      {/* Botón flotante del carrito - SIEMPRE VISIBLE */}
+      <button
+        className="cart-float-button"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <ShoppingCart className="cart-icon" />
+        {totalItems > 0 && (
+          <span className="cart-badge">{totalItems}</span>
         )}
-      </div>
-      
-      <div className="space-y-3 max-h-60 overflow-y-auto mb-4 pr-2">
-        {items.map(item => (
-          <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-medium truncate">{item.nombre}</span>
-                <span className="text-xs text-gray-500">x{item.cantidad}</span>
-              </div>
-              <div className="text-sm text-gray-600">
-                ${item.valor.toFixed(2)} c/u
-              </div>
+      </button>
+
+      {/* Panel del carrito - se abre/cierra */}
+      {isOpen && (
+        <div className="cart-panel">
+          <div className="cart-header">
+            <div className="cart-title-section">
+              <h3 className="cart-title">Mi Carrito</h3>
+              <p className="cart-subtitle">
+                {totalItems === 0 ? 'Vacío' : `${totalItems} ${totalItems === 1 ? 'producto' : 'productos'}`}
+              </p>
             </div>
-            
-            <div className="flex items-center gap-3">
-              <span className="font-bold text-blue-600">
-                ${(item.valor * item.cantidad).toFixed(2)}
-              </span>
-              
-              {onRemoveItem && (
-                <button
-                  onClick={() => onRemoveItem(item.id)}
-                  className="text-red-400 hover:text-red-600"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+
+            <button className="cart-close-btn" onClick={() => setIsOpen(false)}>
+              <X />
+            </button>
           </div>
-        ))}
-      </div>
-      
-      <div className="border-t pt-3">
-        <div className="flex justify-between items-center mb-4">
-          <span className="font-bold text-lg">Total:</span>
-          <span className="text-2xl font-bold text-green-600">${total.toFixed(2)}</span>
+
+          <div className="cart-content">
+            {items.length === 0 ? (
+              <div className="cart-empty">
+                <p className="cart-empty-text">Tu carrito está vacío</p>
+                <p className="cart-empty-subtext">¡Agrega productos para comenzar!</p>
+              </div>
+            ) : (
+              <div className="cart-items">
+                {items.map(item => (
+                  <div key={item.id} className="cart-item">
+                    <div className="cart-item-header">
+                      <div className="cart-item-info">
+                        <div className="cart-item-name">{item.nombre}</div>
+                        <div className="cart-item-price">${item.valor.toFixed(2)} c/u</div>
+                      </div>
+
+                      {onRemoveItem && (
+                        <button
+                          className="cart-item-remove"
+                          onClick={() => onRemoveItem(item.id)}
+                        >
+                          <Trash2 />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="cart-item-footer">
+                      <div className="cart-item-quantity">
+                        {onUpdateQuantity && (
+                          <button
+                            className="quantity-btn-small"
+                            onClick={() => onUpdateQuantity(item.id, item.cantidad - 1)}
+                            disabled={item.cantidad <= 1}
+                          >
+                            <Minus />
+                          </button>
+                        )}
+
+                        <span className="quantity-display">{item.cantidad}</span>
+
+                        {onUpdateQuantity && (
+                          <button
+                            className="quantity-btn-small"
+                            onClick={() => onUpdateQuantity(item.id, item.cantidad + 1)}
+                          >
+                            <Plus />
+                          </button>
+                        )}
+                      </div>
+
+                      <span className="cart-item-total">
+                        ${(item.valor * item.cantidad).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {items.length > 0 && (
+            <div className="cart-total-section">
+              <div className="cart-total-box">
+                <span className="cart-total-label">Total:</span>
+                <span className="cart-total-amount">${total.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="cart-actions">
+            <button className="cart-whatsapp-btn" onClick={enviarPorWhatsApp}>
+              <Send />
+              <span>{items.length === 0 ? 'Consultar por WhatsApp' : 'Enviar por WhatsApp'}</span>
+            </button>
+
+            {items.length > 0 && onClearCart && (
+              <button className="cart-clear-btn" onClick={onClearCart}>
+                Vaciar Carrito
+              </button>
+            )}
+          </div>
         </div>
-        
-        <button className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2">
-          <ShoppingBag className="w-5 h-5" />
-          Finalizar compra
-        </button>
-      </div>
-    </div>
+      )}
+    </>
   );
 }

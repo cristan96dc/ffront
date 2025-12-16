@@ -10,7 +10,14 @@ import { Cart } from './components/Cart';
 import './App.css';
 function App() {
   const { productos, loading } = useProducts();
-  const { carrito, agregarAlCarrito, total } = useCart();
+  const {
+    carrito,
+    agregarAlCarrito,
+    removerDelCarrito,
+    actualizarCantidad,
+    limpiarCarrito,
+    total
+  } = useCart();
   const [productosFiltrados, setProductosFiltrados] = useState<Producto[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
@@ -69,7 +76,13 @@ function App() {
         />
       )}
 
-      <Cart items={carrito} total={total} />
+      <Cart
+        items={carrito}
+        total={total}
+        onRemoveItem={removerDelCarrito}
+        onClearCart={limpiarCarrito}
+        onUpdateQuantity={actualizarCantidad}
+      />
     </div>
   );
 }
